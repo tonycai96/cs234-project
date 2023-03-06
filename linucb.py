@@ -6,14 +6,16 @@ def linear_ucb(x_train, y_train):
     # Hyperparameters
     alpha = 10 # seems like this has to be at least greater than max reward?
 
+    N_ARMS = 3
+
     chosen_arms = []
     num_samples, n_features = x_train.shape
     A_arms = [np.eye(n_features), np.eye(n_features), np.eye(n_features)]
     b_arms = [np.zeros(n_features), np.zeros(n_features), np.zeros(n_features)]
     for i in range(num_samples):
-        pred_arms = np.zeros(3)
+        pred_arms = np.zeros(N_ARMS)
         x_t = x_train[i]
-        for a in range(n_arms):
+        for a in range(N_ARMS):
             A_inv = np.linalg.inv(A_arms[a])
             theta_a = A_inv @ b_arms[a]
             pred_arms[a] = theta_a @ x_t + alpha * np.sqrt(x_t@(A_inv@x_t))
@@ -27,7 +29,6 @@ def linear_ucb(x_train, y_train):
 if __name__ == "__main__":
     np.random.seed(42)
     true_arms = [5*np.random.rand(5), 5*np.random.rand(5), 5*np.random.rand(5)]
-    n_arms = 3
 
     x_train = np.random.rand(2000, 5)
     y_train = np.array([x_train @ true_arms[0], x_train @ true_arms[1], x_train @ true_arms[2]])
