@@ -19,11 +19,11 @@ def clinical_dose(dataset):
         - 0.5695*dataset['Amiodarone (Cordarone)']
     enzyme_inducer_active = (dosage_df['Carbamazepine (Tegretol)'] == 1.0) | (dosage_df['Phenytoin (Dilantin)'] == 1.0) | (dosage_df['Rifampin or Rifampicin'] == 1.0)
     dosage_df.loc[enzyme_inducer_active, 'Predicted Dose'] += 1.2799
-
     dosage_df['Predicted Dose'] = dosage_df['Predicted Dose']**2
+
     low_dose = (dosage_df['Predicted Dose'] <= 21) & (dosage_df['Therapeutic Dose of Warfarin'] <= 21)
-    mid_dose = ((dosage_df['Predicted Dose'] >= 21) & (dosage_df['Predicted Dose'] >= 21)) \
-        & ((dosage_df['Therapeutic Dose of Warfarin'] <= 49) & (dosage_df['Therapeutic Dose of Warfarin'] <= 49))
+    mid_dose = ((dosage_df['Predicted Dose'] >= 21) & (dosage_df['Therapeutic Dose of Warfarin'] >= 21)) \
+        & ((dosage_df['Predicted Dose'] <= 49) & (dosage_df['Therapeutic Dose of Warfarin'] <= 49))
     high_dose = (dosage_df['Predicted Dose'] > 49) & (dosage_df['Therapeutic Dose of Warfarin'] > 49)
     correct = dosage_df[low_dose | mid_dose | high_dose]
     return 1.0 * len(correct) / len(dataset)
@@ -93,9 +93,9 @@ if __name__ == "__main__":
     clinical_dose_acc = clinical_dose(patients_df)
     print('Clinical dose accuracy = ', clinical_dose_acc)
 
-    # Part (2)
+    Part (2)
     features, arms_rewards = compute_features_and_targets(patients_df)
-    linucb_dose = linear_ucb(features, arms_rewards, alpha=0.1)
+    linucb_dose = linear_ucb(features, arms_rewards, alpha=1)
 
     n_patients = len(features)
     regrets = [0.0]
