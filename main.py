@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
 from linucb import linear_ucb
-
-
-TARGET_COL = "Therapeutic Dose of Warfarin"
 
 
 def fixed_actions(dataset):
@@ -64,14 +63,15 @@ def preprocess_df(old_df):
 
 
 def compute_features_and_targets(df):
-    df = df.sample(frac=1).reset_index(drop=True)
-    features_df = df.drop('Therapeutic Dose of Warfarin', axis=1)
-    dosage_df = df['Therapeutic Dose of Warfarin']
-    n_samples, n_arms = len(features_df), 3
-    dosage_np = dosage_df.to_numpy()
-    targets_np = np.zeros((n_samples, n_arms))
+    df = df.sample(frac=1).reset_index(drop=True) # Shuffle the dataset ordering
 
+    n_samples, n_arms = len(df), 3
+
+    features_df = df.drop('Therapeutic Dose of Warfarin', axis=1)
     features_np = np.hstack([features_df.to_numpy(), np.ones((n_samples, 1))])
+
+    dosage_np = df['Therapeutic Dose of Warfarin'].to_numpy()
+    targets_np = np.ones((n_samples, n_arms))
     targets_np[dosage_np < 21, 1] = -1.0
     targets_np[dosage_np < 21, 2] = -1.0
     targets_np[np.all([dosage_np >= 21, dosage_np <= 49], axis=0), 0] = -1.0
@@ -94,7 +94,14 @@ if __name__ == "__main__":
     print('Clinical dose accuracy = ', clinical_dose_acc)
 
     # Part (2)
-    features_np, targets_np = compute_features_and_targets(patients_df)
-    # print(features_np.shape)
-    # print(targets_np.shape)
-    # linucb_dose = linear_ucb(features_np, targets_np)
+    features, arms_rewards = compute_features_and_targets(patients_df)
+    linucb_dose = linear_ucb(features, arms_rewards, alpha=0.1)
+
+    n_patients = len(features)
+    regrets = [0.0]
+    for i in range(n_patients):
+        regrets.append(regrets[-1] - min(0.0, arms_rewards[i][linucb_dose[i]]))
+
+    timesteps = np.linspace(0, n_patients, n_patients+1)
+    plt.plot(timesteps, regrets)
+    plt.show()
