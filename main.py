@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from linucb import linear_ucb
 
 
-def fixed_actions(dataset: np.ndarray) -> float:
+def fixed_actions(dataset: pd.DataFrame) -> float:
     correct = dataset[
         (dataset["Therapeutic Dose of Warfarin"] >= 21)
         & (dataset["Therapeutic Dose of Warfarin"] <= 49)
@@ -15,7 +15,7 @@ def fixed_actions(dataset: np.ndarray) -> float:
     return 1.0 * len(correct) / len(dataset)
 
 
-def clinical_dose(dataset: np.ndarray) -> float:
+def clinical_dose(dataset: pd.DataFrame) -> float:
     dosage_df = dataset.copy()
     dosage_df["Predicted Dose"] = (
         4.0376
@@ -35,8 +35,8 @@ def clinical_dose(dataset: np.ndarray) -> float:
     dosage_df.loc[enzyme_inducer_active, "Predicted Dose"] += 1.2799
     dosage_df["Predicted Dose"] = dosage_df["Predicted Dose"] ** 2
 
-    low_dose = (dosage_df["Predicted Dose"] <= 21) & (
-        dosage_df["Therapeutic Dose of Warfarin"] <= 21
+    low_dose = (dosage_df["Predicted Dose"] < 21) & (
+        dosage_df["Therapeutic Dose of Warfarin"] < 21
     )
     mid_dose = (
         (dosage_df["Predicted Dose"] >= 21)
@@ -52,7 +52,53 @@ def clinical_dose(dataset: np.ndarray) -> float:
     return 1.0 * len(correct) / len(dataset)
 
 
-def preprocess_df(old_df: pd.DataFrame) -> np.ndarray:
+def pharmacogenetic_dose(dataset: pd.DataFrame) -> float:
+    dosage_df = dataset.copy()
+    dosage_df["Predicted Dose"] = (
+        5.6044
+        - 0.2614 * dataset["_age_decade"]
+        + 0.0087 * dataset["Height (cm)"]
+        + 0.0128 * dataset["Weight (kg)"]
+        - 0.8677 * dataset["VKORC1 A/G"]
+        - 1.6974 * dataset["VKORC1 A/A"]
+        - 0.4854 * dataset["VKORC1 unknown"]
+        - 0.5211 * dataset["CYP2C9 *1/*2"]
+        - 0.9357 * dataset["CYP2C9 *1/*3"]
+        - 1.0616 * dataset["CYP2C9 *2/*2"]
+        - 1.9206 * dataset["CYP2C9 *2/*3"]
+        - 2.3312 * dataset["CYP2C9 *3/*3"]
+        - 0.2188 * dataset["CYP2C9 unknown"]
+        - 0.1092 * dataset["_race_asian"]
+        - 0.2760 * dataset["_race_black"]
+        - 0.1032 * dataset["_race_other"]
+        - 0.5503 * dataset["Amiodarone (Cordarone)"]
+    )
+    enzyme_inducer_active = (
+        (dosage_df["Carbamazepine (Tegretol)"] == 1.0)
+        | (dosage_df["Phenytoin (Dilantin)"] == 1.0)
+        | (dosage_df["Rifampin or Rifampicin"] == 1.0)
+    )
+    dosage_df.loc[enzyme_inducer_active, "Predicted Dose"] += 1.1816
+    dosage_df["Predicted Dose"] = dosage_df["Predicted Dose"] ** 2
+
+    low_dose = (dosage_df["Predicted Dose"] < 21) & (
+        dosage_df["Therapeutic Dose of Warfarin"] < 21
+    )
+    mid_dose = (
+        (dosage_df["Predicted Dose"] >= 21)
+        & (dosage_df["Therapeutic Dose of Warfarin"] >= 21)
+    ) & (
+        (dosage_df["Predicted Dose"] <= 49)
+        & (dosage_df["Therapeutic Dose of Warfarin"] <= 49)
+    )
+    high_dose = (dosage_df["Predicted Dose"] > 49) & (
+        dosage_df["Therapeutic Dose of Warfarin"] > 49
+    )
+    correct = dosage_df[low_dose | mid_dose | high_dose]
+    return 1.0 * len(correct) / len(dataset)
+
+
+def preprocess_df(old_df: pd.DataFrame) -> pd.DataFrame:
     columns = [
         "Age",
         "Height (cm)",
@@ -62,12 +108,16 @@ def preprocess_df(old_df: pd.DataFrame) -> np.ndarray:
         "Phenytoin (Dilantin)",
         "Rifampin or Rifampicin",
         "Amiodarone (Cordarone)",
+        "VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T",
+        "Cyp2C9 genotypes",
         "Therapeutic Dose of Warfarin",
     ]
 
     df = old_df.copy()
     df = df[df["Therapeutic Dose of Warfarin"].notna() & df["Age"].notna()]
     df = df[columns]
+
+    # Convert race to categories.
     df["_race_asian"] = 0.0
     df["_race_black"] = 0.0
     df["_race_other"] = 0.0
@@ -76,9 +126,59 @@ def preprocess_df(old_df: pd.DataFrame) -> np.ndarray:
     df.loc[is_asian, "_race_asian"] = 1.0
     df.loc[is_black, "_race_black"] = 1.0
     df.loc[~(is_asian | is_black), "_race_other"] = 1.0
+
+    # Convert VKORC1 genotype to category.
+    df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"].fillna(
+        "NA", inplace=True
+    )
+    df["VKORC1 A/G"] = 0.0
+    df["VKORC1 A/A"] = 0.0
+    df["VKORC1 unknown"] = 0.0
+    is_VKORC1_GA = (
+        df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"] == "A/G"
+    )
+    is_VKORC1_AA = (
+        df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"] == "A/A"
+    )
+    is_VKORC1_unknown = (
+        df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"] == "NA"
+    )
+    df.loc[is_VKORC1_GA, "VKORC1 A/G"] = 1.0
+    df.loc[is_VKORC1_AA, "VKORC1 A/A"] = 1.0
+    df.loc[is_VKORC1_unknown, "VKORC1 unknown"] = 1.0
+
+    # Convert CYP2C9 genotype to category.
+    df["Cyp2C9 genotypes"].fillna("NA", inplace=True)
+    df["CYP2C9 *1/*2"] = 0.0
+    df["CYP2C9 *1/*3"] = 0.0
+    df["CYP2C9 *2/*2"] = 0.0
+    df["CYP2C9 *2/*3"] = 0.0
+    df["CYP2C9 *3/*3"] = 0.0
+    df["CYP2C9 unknown"] = 0.0
+    is_CYP2C9_12 = df["Cyp2C9 genotypes"] == "*1/*2"
+    is_CYP2C9_13 = df["Cyp2C9 genotypes"] == "*1/*3"
+    is_CYP2C9_22 = df["Cyp2C9 genotypes"] == "*2/*2"
+    is_CYP2C9_23 = df["Cyp2C9 genotypes"] == "*2/*3"
+    is_CYP2C9_33 = df["Cyp2C9 genotypes"] == "*3/*3"
+    is_CYP2C9_unknown = df["Cyp2C9 genotypes"] == "NA"
+    df.loc[is_CYP2C9_12, "CYP2C9 *1/*2"] = 1.0
+    df.loc[is_CYP2C9_13, "CYP2C9 *1/*3"] = 1.0
+    df.loc[is_CYP2C9_22, "CYP2C9 *2/*2"] = 1.0
+    df.loc[is_CYP2C9_23, "CYP2C9 *2/*3"] = 1.0
+    df.loc[is_CYP2C9_33, "CYP2C9 *3/*3"] = 1.0
+    df.loc[is_CYP2C9_unknown, "CYP2C9 unknown"] = 1.0
+
+    # Convert age to decade.
     df["_age_decade"] = 0.0
     df = df.assign(_age_decade=lambda x: int(x["Age"][0][0]))
-    df = df.drop(columns=["Age", "Race"])
+    df = df.drop(
+        columns=[
+            "Age",
+            "Race",
+            "VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T",
+            "Cyp2C9 genotypes",
+        ]
+    )
 
     df["Height (cm)"].fillna(
         df["Height (cm)"].mean(numeric_only=True).round(1), inplace=True
@@ -113,16 +213,18 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     patients_df = pd.read_csv("data/warfarin.csv")
-    patients_df = preprocess_df(patients_df)
+    processed_df = preprocess_df(patients_df)
 
     # Part (1)
-    fixed_dose_acc = fixed_actions(patients_df)
-    print("Fixed dose accuracy = ", fixed_dose_acc)
-    clinical_dose_acc = clinical_dose(patients_df)
-    print("Clinical dose accuracy = ", clinical_dose_acc)
+    fixed_dose_acc = fixed_actions(processed_df)
+    print(f"Fixed dose accuracy = {fixed_dose_acc}")
+    clinical_dose_acc = clinical_dose(processed_df)
+    print(f"Clinical dose accuracy = {clinical_dose_acc}")
+    pharmacogenetic_dose_acc = pharmacogenetic_dose(processed_df)
+    print(f"Pharmacogenetic dose accuracy = {pharmacogenetic_dose_acc}")
 
     # Part (2)
-    features, arms_rewards = compute_features_and_targets(patients_df)
+    features, arms_rewards = compute_features_and_targets(processed_df)
     linucb_dose = linear_ucb(features, arms_rewards, alpha=1)
 
     n_patients = len(features)
