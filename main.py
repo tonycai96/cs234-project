@@ -1,11 +1,13 @@
-import matplotlib.pyplot as plt
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from linucb import linear_ucb
 
 
-def fixed_actions(dataset):
+def fixed_actions(dataset: np.ndarray) -> float:
     correct = dataset[
         (dataset["Therapeutic Dose of Warfarin"] >= 21)
         & (dataset["Therapeutic Dose of Warfarin"] <= 49)
@@ -13,7 +15,7 @@ def fixed_actions(dataset):
     return 1.0 * len(correct) / len(dataset)
 
 
-def clinical_dose(dataset):
+def clinical_dose(dataset: np.ndarray) -> float:
     dosage_df = dataset.copy()
     dosage_df["Predicted Dose"] = (
         4.0376
@@ -50,7 +52,7 @@ def clinical_dose(dataset):
     return 1.0 * len(correct) / len(dataset)
 
 
-def preprocess_df(old_df):
+def preprocess_df(old_df: pd.DataFrame) -> np.ndarray:
     columns = [
         "Age",
         "Height (cm)",
@@ -88,7 +90,7 @@ def preprocess_df(old_df):
     return df
 
 
-def compute_features_and_targets(df):
+def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
     df = df.sample(frac=1).reset_index(drop=True)  # Shuffle the dataset ordering
 
     n_samples, n_arms = len(df), 3

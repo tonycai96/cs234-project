@@ -1,10 +1,10 @@
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
+
+N_ARMS = 3
 
 
-def linear_ucb(x_train, y_train, alpha=2):
-    N_ARMS = 3
-
+def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, alpha=2) -> np.ndaray:
     chosen_arms = []
     num_samples, n_features = x_train.shape
     A_arms = [np.eye(n_features), np.eye(n_features), np.eye(n_features)]
