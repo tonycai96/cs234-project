@@ -199,7 +199,7 @@ def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarr
     features_np = np.hstack([features_df.to_numpy(), np.ones((n_samples, 1))])
 
     dosage_np = df["Therapeutic Dose of Warfarin"].to_numpy()
-    targets_np = np.ones((n_samples, n_arms))
+    targets_np = np.zeros((n_samples, n_arms))
     targets_np[dosage_np < 21, 1] = -1.0
     targets_np[dosage_np < 21, 2] = -1.0
     targets_np[np.all([dosage_np >= 21, dosage_np <= 49], axis=0), 0] = -1.0
@@ -229,8 +229,13 @@ if __name__ == "__main__":
 
     n_patients = len(features)
     regrets = [0.0]
+    num_correct_preds = 0
     for i in range(n_patients):
-        regrets.append(regrets[-1] - min(0.0, arms_rewards[i][linucb_dose[i]]))
+        regrets.append(regrets[-1] - arms_rewards[i][linucb_dose[i]])
+        if arms_rewards[i][linucb_dose[i]] == 0:
+            num_correct_preds += 1
+    linucb_acc = num_correct_preds / n_patients
+    print(f"LinUCB dose accuracy: {linucb_acc}")
 
     timesteps = np.linspace(0, n_patients, n_patients + 1)
     plt.plot(timesteps, regrets)
