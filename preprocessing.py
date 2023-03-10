@@ -1,10 +1,14 @@
+from typing import Tuple
+
 import pandas as pd
+import numpy as np
 
 
 RS9923231_COL = "VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"
 RS2359612_COL = "VKORC1 genotype: 2255C>T (7566); chr16:31011297; rs2359612; A/G"
 RS9934438_COL = "VKORC1 genotype: 1173 C>T(6484); chr16:31012379; rs9934438; A/G"
 RS8050894_COL = "VKORC1 genotype: 1542G>C (6853); chr16:31012010; rs8050894; C/G"
+
 
 def remove_bad_data(df: pd.DataFrame) -> pd.DataFrame:
     reached_stable_dose = df["Subject Reached Stable Dose of Warfarin"] == 1.0
@@ -18,15 +22,9 @@ def impute_genotypes(df: pd.DataFrame) -> pd.DataFrame:
     rs2359612_CC = df[RS2359612_COL] == "C/C"
     rs2359612_TT = df[RS2359612_COL] == "T/T"
     rs2359612_CT = df[RS2359612_COL] == "C/T"
-    df.loc[
-        rs2359612_CC & ~is_black & ~is_race_unknown, RS9923231_COL
-    ] = "G/G"
-    df.loc[
-        rs2359612_TT & ~is_black & ~is_race_unknown, RS9923231_COL
-    ] = "A/A"
-    df.loc[
-        rs2359612_CT & ~is_black & ~is_race_unknown, RS9923231_COL
-    ] = "A/G"
+    df.loc[rs2359612_CC & ~is_black & ~is_race_unknown, RS9923231_COL] = "G/G"
+    df.loc[rs2359612_TT & ~is_black & ~is_race_unknown, RS9923231_COL] = "A/A"
+    df.loc[rs2359612_CT & ~is_black & ~is_race_unknown, RS9923231_COL] = "A/G"
     rs9934438_CC = df[RS9934438_COL] == "C/C"
     rs9934438_TT = df[RS9934438_COL] == "T/T"
     rs9934438_CT = df[RS9934438_COL] == "C/T"
@@ -36,15 +34,9 @@ def impute_genotypes(df: pd.DataFrame) -> pd.DataFrame:
     rs8050894_GG = df[RS8050894_COL] == "G/G"
     rs8050894_CC = df[RS8050894_COL] == "C/C"
     rs8050894_CG = df[RS8050894_COL] == "C/G"
-    df.loc[
-        rs8050894_GG & ~is_black & ~is_race_unknown, RS9923231_COL
-    ] = "G/G"
-    df.loc[
-        rs8050894_CC & ~is_black & ~is_race_unknown, RS9923231_COL
-    ] = "A/A"
-    df.loc[
-        rs8050894_CG & ~is_black & ~is_race_unknown, RS9923231_COL
-    ] = "A/G"
+    df.loc[rs8050894_GG & ~is_black & ~is_race_unknown, RS9923231_COL] = "G/G"
+    df.loc[rs8050894_CC & ~is_black & ~is_race_unknown, RS9923231_COL] = "A/A"
+    df.loc[rs8050894_CG & ~is_black & ~is_race_unknown, RS9923231_COL] = "A/G"
     return df
 
 
@@ -118,7 +110,6 @@ def compute_feature_columns(old_df: pd.DataFrame) -> pd.DataFrame:
     df.loc[is_CYP2C9_33, "CYP2C9 *3/*3"] = 1.0
     df.loc[is_CYP2C9_unknown, "CYP2C9 unknown"] = 1.0
 
-
     df["Height (cm)"].fillna(
         df["Height (cm)"].mean(numeric_only=True).round(1), inplace=True
     )
@@ -156,6 +147,25 @@ if __name__ == "__main__":
     print(patients_df[RS9923231_COL].count())
     patients_df = impute_genotypes(patients_df)
     print(patients_df[RS9923231_COL].count())
+
+
+def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    # df = df.sample(frac=1).reset_index(drop=True)  # Shuffle the dataset ordering
+
+    n_samples, n_arms = len(df), 3
+
+    features_df = df.drop("Therapeutic Dose of Warfarin", axis=1)
+    features_np = np.hstack([features_df.to_numpy(), np.ones((n_samples, 1))])
+
+    dosage_np = df["Therapeutic Dose of Warfarin"].to_numpy()
+    targets_np = np.zeros((n_samples, n_arms))
+    targets_np[dosage_np < 21, 1] = -1.0
+    targets_np[dosage_np < 21, 2] = -1.0
+    targets_np[np.all([dosage_np >= 21, dosage_np <= 49], axis=0), 0] = -1.0
+    targets_np[np.all([dosage_np >= 21, dosage_np <= 49], axis=0), 2] = -1.0
+    targets_np[dosage_np > 49, 0] = -1.0
+    targets_np[dosage_np > 49, 1] = -1.0
+    return features_np, targets_np
 
 """
 Index(['PharmGKB Subject ID', 'Gender', 'Race', 'Ethnicity', 'Age',
