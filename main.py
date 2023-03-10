@@ -5,6 +5,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from linucb import linear_ucb
+from preprocessing import preprocess_patients_df
 
 
 def fixed_actions(dataset: pd.DataFrame) -> float:
@@ -12,6 +13,9 @@ def fixed_actions(dataset: pd.DataFrame) -> float:
         (dataset["Therapeutic Dose of Warfarin"] >= 21)
         & (dataset["Therapeutic Dose of Warfarin"] <= 49)
     ]
+    x = dataset["Therapeutic Dose of Warfarin"].to_numpy() - 35
+    x = x**2
+    print('mse (fixed dose) = ', x.mean())
     return 1.0 * len(correct) / len(dataset)
 
 
@@ -95,99 +99,13 @@ def pharmacogenetic_dose(dataset: pd.DataFrame) -> float:
         dosage_df["Therapeutic Dose of Warfarin"] > 49
     )
     correct = dosage_df[low_dose | mid_dose | high_dose]
+
+    pred_dose = dosage_df["Predicted Dose"].to_numpy()
+    real_dose = dosage_df["Therapeutic Dose of Warfarin"].to_numpy()
+    x = (pred_dose - real_dose)**2
+    print('mse (pharmocogenetic) = ', x.mean())
+
     return 1.0 * len(correct) / len(dataset)
-
-
-def preprocess_df(old_df: pd.DataFrame) -> pd.DataFrame:
-    columns = [
-        "Age",
-        "Height (cm)",
-        "Weight (kg)",
-        "Race",
-        "Carbamazepine (Tegretol)",
-        "Phenytoin (Dilantin)",
-        "Rifampin or Rifampicin",
-        "Amiodarone (Cordarone)",
-        "VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T",
-        "Cyp2C9 genotypes",
-        "Therapeutic Dose of Warfarin",
-    ]
-
-    df = old_df.copy()
-    df = df[df["Therapeutic Dose of Warfarin"].notna() & df["Age"].notna()]
-    df = df[columns]
-
-    # Convert race to categories.
-    df["_race_asian"] = 0.0
-    df["_race_black"] = 0.0
-    df["_race_other"] = 0.0
-    is_asian = df["Race"] == "Asian"
-    is_black = df["Race"] == "Black or African American"
-    df.loc[is_asian, "_race_asian"] = 1.0
-    df.loc[is_black, "_race_black"] = 1.0
-    df.loc[~(is_asian | is_black), "_race_other"] = 1.0
-
-    # Convert VKORC1 genotype to category.
-    df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"].fillna(
-        "NA", inplace=True
-    )
-    df["VKORC1 A/G"] = 0.0
-    df["VKORC1 A/A"] = 0.0
-    df["VKORC1 unknown"] = 0.0
-    is_VKORC1_GA = (
-        df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"] == "A/G"
-    )
-    is_VKORC1_AA = (
-        df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"] == "A/A"
-    )
-    is_VKORC1_unknown = (
-        df["VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"] == "NA"
-    )
-    df.loc[is_VKORC1_GA, "VKORC1 A/G"] = 1.0
-    df.loc[is_VKORC1_AA, "VKORC1 A/A"] = 1.0
-    df.loc[is_VKORC1_unknown, "VKORC1 unknown"] = 1.0
-
-    # Convert CYP2C9 genotype to category.
-    df["Cyp2C9 genotypes"].fillna("NA", inplace=True)
-    df["CYP2C9 *1/*2"] = 0.0
-    df["CYP2C9 *1/*3"] = 0.0
-    df["CYP2C9 *2/*2"] = 0.0
-    df["CYP2C9 *2/*3"] = 0.0
-    df["CYP2C9 *3/*3"] = 0.0
-    df["CYP2C9 unknown"] = 0.0
-    is_CYP2C9_12 = df["Cyp2C9 genotypes"] == "*1/*2"
-    is_CYP2C9_13 = df["Cyp2C9 genotypes"] == "*1/*3"
-    is_CYP2C9_22 = df["Cyp2C9 genotypes"] == "*2/*2"
-    is_CYP2C9_23 = df["Cyp2C9 genotypes"] == "*2/*3"
-    is_CYP2C9_33 = df["Cyp2C9 genotypes"] == "*3/*3"
-    is_CYP2C9_unknown = df["Cyp2C9 genotypes"] == "NA"
-    df.loc[is_CYP2C9_12, "CYP2C9 *1/*2"] = 1.0
-    df.loc[is_CYP2C9_13, "CYP2C9 *1/*3"] = 1.0
-    df.loc[is_CYP2C9_22, "CYP2C9 *2/*2"] = 1.0
-    df.loc[is_CYP2C9_23, "CYP2C9 *2/*3"] = 1.0
-    df.loc[is_CYP2C9_33, "CYP2C9 *3/*3"] = 1.0
-    df.loc[is_CYP2C9_unknown, "CYP2C9 unknown"] = 1.0
-
-    # Convert age to decade.
-    df["_age_decade"] = 0.0
-    df = df.assign(_age_decade=lambda x: int(x["Age"][0][0]))
-    df = df.drop(
-        columns=[
-            "Age",
-            "Race",
-            "VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T",
-            "Cyp2C9 genotypes",
-        ]
-    )
-
-    df["Height (cm)"].fillna(
-        df["Height (cm)"].mean(numeric_only=True).round(1), inplace=True
-    )
-    df["Weight (kg)"].fillna(
-        df["Weight (kg)"].mean(numeric_only=True).round(1), inplace=True
-    )
-    df = df.fillna(0.0)
-    return df
 
 
 def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
@@ -200,6 +118,7 @@ def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarr
 
     dosage_np = df["Therapeutic Dose of Warfarin"].to_numpy()
     targets_np = np.zeros((n_samples, n_arms))
+    targets_np = np.zeros((n_samples, n_arms))
     targets_np[dosage_np < 21, 1] = -1.0
     targets_np[dosage_np < 21, 2] = -1.0
     targets_np[np.all([dosage_np >= 21, dosage_np <= 49], axis=0), 0] = -1.0
@@ -210,10 +129,10 @@ def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarr
 
 
 if __name__ == "__main__":
-    np.random.seed(42)
+    np.random.seed(12)
 
     patients_df = pd.read_csv("data/warfarin.csv")
-    processed_df = preprocess_df(patients_df)
+    processed_df = preprocess_patients_df(patients_df)
 
     # Part (1)
     fixed_dose_acc = fixed_actions(processed_df)
@@ -231,54 +150,16 @@ if __name__ == "__main__":
     regrets = [0.0]
     num_correct_preds = 0
     for i in range(n_patients):
-        regrets.append(regrets[-1] - arms_rewards[i][linucb_dose[i]])
-        if arms_rewards[i][linucb_dose[i]] == 0:
-            num_correct_preds += 1
-    linucb_acc = num_correct_preds / n_patients
-    print(f"LinUCB dose accuracy: {linucb_acc}")
+        regrets.append(regrets[-1] - min(0.0, arms_rewards[i][linucb_dose[i]]))
+    print(f"LinUCB final accuracy = {1.0 - regrets[-1] / n_patients}")
 
-    timesteps = np.linspace(0, n_patients, n_patients + 1)
-    plt.plot(timesteps, regrets)
-    plt.show()
+    # incorrect_dose_frac = []
+    # n_incorrect = 0
+    # for i in range(1, n_patients+1):
+    #     n_incorrect -= arms_rewards[i-1, 1]
+    #     print(arms_rewards[i-1, 1])
+    #     incorrect_dose_frac.append(n_incorrect / i)
 
-
-"""
-Index(['PharmGKB Subject ID', 'Gender', 'Race', 'Ethnicity', 'Age',
-       'Height (cm)', 'Weight (kg)', 'Indication for Warfarin Treatment',
-       'Comorbidities', 'Diabetes',
-       'Congestive Heart Failure and/or Cardiomyopathy', 'Valve Replacement',
-       'Medications', 'Aspirin', 'Acetaminophen or Paracetamol (Tylenol)',
-       'Was Dose of Acetaminophen or Paracetamol (Tylenol) >1300mg/day',
-       'Simvastatin (Zocor)', 'Atorvastatin (Lipitor)', 'Fluvastatin (Lescol)',
-       'Lovastatin (Mevacor)', 'Pravastatin (Pravachol)',
-       'Rosuvastatin (Crestor)', 'Cerivastatin (Baycol)',
-       'Amiodarone (Cordarone)', 'Carbamazepine (Tegretol)',
-       'Phenytoin (Dilantin)', 'Rifampin or Rifampicin',
-       'Sulfonamide Antibiotics', 'Macrolide Antibiotics',
-       'Anti-fungal Azoles', 'Herbal Medications, Vitamins, Supplements',
-       'Target INR', 'Estimated Target INR Range Based on Indication',
-       'Subject Reached Stable Dose of Warfarin',
-       'Therapeutic Dose of Warfarin',
-       'INR on Reported Therapeutic Dose of Warfarin', 'Current Smoker',
-       'Cyp2C9 genotypes', 'Genotyped QC Cyp2C9*2', 'Genotyped QC Cyp2C9*3',
-       'Combined QC CYP2C9',
-       'VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T',
-       'VKORC1 QC genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T',
-       'VKORC1 genotype: 497T>G (5808); chr16:31013055; rs2884737; A/C',
-       'VKORC1 QC genotype: 497T>G (5808); chr16:31013055; rs2884737; A/C',
-       'VKORC1 genotype: 1173 C>T(6484); chr16:31012379; rs9934438; A/G',
-       'VKORC1 QC genotype: 1173 C>T(6484); chr16:31012379; rs9934438; A/G',
-       'VKORC1 genotype: 1542G>C (6853); chr16:31012010; rs8050894; C/G',
-       'VKORC1 QC genotype: 1542G>C (6853); chr16:31012010; rs8050894; C/G',
-       'VKORC1 genotype: 3730 G>A (9041); chr16:31009822; rs7294;  A/G',
-       'VKORC1 QC genotype: 3730 G>A (9041); chr16:31009822; rs7294;  A/G',
-       'VKORC1 genotype: 2255C>T (7566); chr16:31011297; rs2359612; A/G',
-       'VKORC1 QC genotype: 2255C>T (7566); chr16:31011297; rs2359612; A/G',
-       'VKORC1 genotype: -4451 C>A (861); Chr16:31018002; rs17880887; A/C',
-       'VKORC1 QC genotype: -4451 C>A (861); Chr16:31018002; rs17880887; A/C',
-       'CYP2C9 consensus', 'VKORC1 -1639 consensus', 'VKORC1 497 consensus',
-       'VKORC1 1173 consensus', 'VKORC1 1542 consensus',
-       'VKORC1 3730 consensus', 'VKORC1 2255 consensus',
-       'VKORC1 -4451 consensus', 'Unnamed: 63', 'Unnamed: 64', 'Unnamed: 65'],
-      dtype='object')
-"""
+    # timesteps = np.linspace(1, n_patients, n_patients)
+    # plt.plot(timesteps, incorrect_dose_frac)
+    # plt.show()
