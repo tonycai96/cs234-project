@@ -167,6 +167,7 @@ def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarr
     targets_np[dosage_np > 49, 1] = -1.0
     return features_np, targets_np
 
+
 """
 Index(['PharmGKB Subject ID', 'Gender', 'Race', 'Ethnicity', 'Age',
        'Height (cm)', 'Weight (kg)', 'Indication for Warfarin Treatment',
