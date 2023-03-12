@@ -4,7 +4,9 @@ from matplotlib import pyplot as plt
 N_ARMS = 3
 
 
-def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, alpha: int = 2) -> np.ndarray:
+def linear_ucb(
+    x_train: np.ndarray[float], y_train: np.ndarray[float], alpha: int = 2
+) -> np.ndarray[int]:
     chosen_arms = []
     num_samples, n_features = x_train.shape
     A_arms = [np.eye(n_features), np.eye(n_features), np.eye(n_features)]
@@ -20,7 +22,7 @@ def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, alpha: int = 2) -> np.n
         A_arms[a_t] += np.outer(x_t, x_t)
         b_arms[a_t] += y_train[i][a_t] * x_t
         chosen_arms.append(a_t)
-    return chosen_arms
+    return np.array(chosen_arms)
 
 
 if __name__ == "__main__":
