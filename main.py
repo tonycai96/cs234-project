@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -117,6 +115,9 @@ if __name__ == "__main__":
         metric_name="Regret",
         file_name="regret.png",
     )
+    
+    ax = plt.gca()
+    ax.set_ylim([0.2, 0.8])
     plot_performance(
         np.array(fixed_dose_incorrect_frac_trials),
         np.array(linear_oracle_incorrect_frac_trials),
