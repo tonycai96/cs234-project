@@ -115,7 +115,7 @@ if __name__ == "__main__":
         metric_name="Regret",
         file_name="regret.png",
     )
-    
+
     ax = plt.gca()
     ax.set_ylim([0.2, 0.8])
     plot_performance(
