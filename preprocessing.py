@@ -1,8 +1,7 @@
 from typing import Tuple
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 
 RS9923231_COL = "VKORC1 genotype: -1639 G>A (3673); chr16:31015190; rs9923231; C/T"
 RS2359612_COL = "VKORC1 genotype: 2255C>T (7566); chr16:31011297; rs2359612; A/G"

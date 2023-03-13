@@ -1,12 +1,26 @@
+import dataclasses
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+import supervised_learning
+from dosing_algo import (fixed_dose_policy, linucb_policy,
+                         pharmacogenetic_policy)
 from preprocessing import preprocess_patients_df
-from dosing_algo import fixed_dose_policy, pharmacogenetic_policy, linucb_policy
 
 
-def compute_metrics(dosage_bucket, dosage_target):
+@dataclasses.dataclass(frozen=True)
+class Metric:
+    metric_values: list[list[int]] | list[np.ndarray[float]]
+    label_name: str
+    color: str
+
+
+def compute_metrics(
+    dosage_bucket: np.ndarray, dosage_target: np.ndarray
+) -> Tuple[list[int], np.ndarray]:
     n_patients = len(dosage_bucket)
     regrets = []
     incorrect_fracs = []
@@ -30,42 +44,27 @@ def compute_metrics(dosage_bucket, dosage_target):
 
 
 def plot_performance(
-    fixed_dose_metric, lin_oracle_metric, linucb_metric, metric_name, file_name
-):
-    n_patients = fixed_dose_metric.shape[1]
+    metrics: list[Metric],
+    n_patients: int,
+    metric_name: str,
+    file_name: str,
+) -> None:
     timesteps = np.linspace(0, n_patients - 1, n_patients)
 
-    fixed_dose_mean = fixed_dose_metric.mean(axis=0)
-    lin_oracle_mean = lin_oracle_metric.mean(axis=0)
-    linucb_mean = linucb_metric.mean(axis=0)
-    fixed_dose_ci = 1.96 * fixed_dose_metric.std(axis=0)
-    lin_oracle_ci = 1.96 * lin_oracle_metric.std(axis=0)
-    linucb_ci = 1.96 * linucb_metric.std(axis=0)
+    for metric in metrics:
+        metric_values = np.array(metric.metric_values)
+        mean = metric_values.mean(axis=0)
+        ci = 1.96 * metric_values.std(axis=0)
 
-    plt.plot(timesteps, fixed_dose_mean, label="Fixed Dose")
-    plt.plot(timesteps, lin_oracle_mean, label="Pharmocogenetic Dose")
-    plt.plot(timesteps, linucb_mean, label="LinUCB Dose")
-    plt.fill_between(
-        timesteps,
-        (fixed_dose_mean - fixed_dose_ci),
-        (fixed_dose_mean + fixed_dose_ci),
-        color="blue",
-        alpha=0.1,
-    )
-    plt.fill_between(
-        timesteps,
-        (lin_oracle_mean - lin_oracle_ci),
-        (lin_oracle_mean + lin_oracle_ci),
-        color="orange",
-        alpha=0.1,
-    )
-    plt.fill_between(
-        timesteps,
-        (linucb_mean - linucb_ci),
-        (linucb_mean + linucb_ci),
-        color="green",
-        alpha=0.1,
-    )
+        plt.plot(timesteps, mean, label=metric.label_name, color=metric.color)
+        plt.fill_between(
+            timesteps,
+            (mean - ci),
+            (mean + ci),
+            color=metric.color,
+            alpha=0.1,
+        )
+
     plt.xlabel("Number of patients")
     plt.ylabel(metric_name)
     plt.legend()
@@ -83,6 +82,7 @@ if __name__ == "__main__":
     fixed_dose_regret_trials, fixed_dose_incorrect_frac_trials = [], []
     linear_oracle_regret_trials, linear_oracle_incorrect_frac_trials = [], []
     linucb_regret_trials, linucb_incorrect_frac_trials = [], []
+    bandit_sl_regret_trials, bandit_sl_incorrect_frac_trials = [], []
     for _ in range(N_TRIALS):
         shuffled_patients_df = patients_df.sample(frac=1).reset_index(drop=True)
         dosage_target = shuffled_patients_df["Therapeutic Dose of Warfarin"].to_numpy()
@@ -108,10 +108,35 @@ if __name__ == "__main__":
         linucb_regret_trials.append(linucb_regret)
         linucb_incorrect_frac_trials.append(linucb_incorrect_frac)
 
+        bandit_sl_buckets = supervised_learning.bandit_sl(shuffled_patients_df)
+        bandit_sl_regret, bandit_sl_incorrect_frac = compute_metrics(
+            bandit_sl_buckets, dosage_target
+        )
+        bandit_sl_regret_trials.append(bandit_sl_regret)
+        bandit_sl_incorrect_frac_trials.append(bandit_sl_incorrect_frac)
+
     plot_performance(
-        np.array(fixed_dose_regret_trials),
-        np.array(linear_oracle_regret_trials),
-        np.array(linucb_regret_trials),
+        metrics=[
+            Metric(
+                metric_values=fixed_dose_regret_trials,
+                label_name="Fixed Dose",
+                color="blue",
+            ),
+            Metric(
+                metric_values=linear_oracle_regret_trials,
+                label_name="Pharmacogenetic",
+                color="red",
+            ),
+            Metric(
+                metric_values=linucb_regret_trials, label_name="LinUCB", color="green"
+            ),
+            Metric(
+                metric_values=bandit_sl_regret_trials,
+                label_name="Bandit SL",
+                color="yellow",
+            ),
+        ],
+        n_patients=np.array(fixed_dose_regret_trials).shape[1],
         metric_name="Regret",
         file_name="regret.png",
     )
@@ -119,9 +144,29 @@ if __name__ == "__main__":
     ax = plt.gca()
     ax.set_ylim([0.2, 0.8])
     plot_performance(
-        np.array(fixed_dose_incorrect_frac_trials),
-        np.array(linear_oracle_incorrect_frac_trials),
-        np.array(linucb_incorrect_frac_trials),
+        metrics=[
+            Metric(
+                metric_values=fixed_dose_incorrect_frac_trials,
+                label_name="Fixed Dose",
+                color="blue",
+            ),
+            Metric(
+                metric_values=linear_oracle_incorrect_frac_trials,
+                label_name="Pharmacogenetic",
+                color="red",
+            ),
+            Metric(
+                metric_values=linucb_incorrect_frac_trials,
+                label_name="LinUCB",
+                color="green",
+            ),
+            Metric(
+                metric_values=bandit_sl_incorrect_frac_trials,
+                label_name="Bandit SL",
+                color="yellow",
+            ),
+        ],
+        n_patients=np.array(fixed_dose_incorrect_frac_trials).shape[1],
         metric_name="Fraction of incorrect dosing decision",
         file_name="incorrect_fraction.png",
     )

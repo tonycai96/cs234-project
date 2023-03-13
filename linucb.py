@@ -63,7 +63,7 @@ def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, alpha: int = 2) -> np.n
         A_arms[a_t] += np.outer(x_t, x_t)
         b_arms[a_t] += y_train[i][a_t] * x_t
         chosen_arms.append(a_t)
-    return chosen_arms
+    return np.array(chosen_arms)
 
 
 def linear_ucb_stacked(x_train: np.ndarray, y_train: np.ndarray, alpha: int = 2) -> np.ndarray:

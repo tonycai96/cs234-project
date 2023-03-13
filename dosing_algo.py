@@ -1,14 +1,15 @@
 import numpy as np
 import pandas as pd
+
 from linucb import linear_ucb
 from preprocessing import compute_features_and_targets
 
 
-def fixed_dose_policy(dataset: pd.DataFrame):
+def fixed_dose_policy(dataset: pd.DataFrame) -> np.ndarray[int]:
     return np.ones(len(dataset))
 
 
-def pharmacogenetic_policy(dataset: pd.DataFrame):
+def pharmacogenetic_policy(dataset: pd.DataFrame) -> np.ndarray[int]:
     dosage_df = dataset.copy()
     dosage_df["Predicted Dose"] = (
         5.6044
@@ -44,7 +45,7 @@ def pharmacogenetic_policy(dataset: pd.DataFrame):
     return dosage_buckets
 
 
-def linucb_policy(dataset: pd.DataFrame):
+def linucb_policy(dataset: pd.DataFrame) -> np.ndarray:
     features, arms_rewards = compute_features_and_targets(dataset)
     return linear_ucb(features, arms_rewards, alpha=1)
 

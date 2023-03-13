@@ -4,3 +4,4 @@ torch
 isort
 black
 matplotlib
+scikit-learn
