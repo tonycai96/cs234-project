@@ -133,7 +133,7 @@ if __name__ == "__main__":
             Metric(
                 metric_values=bandit_sl_regret_trials,
                 label_name="Bandit SL",
-                color="yellow",
+                color="gold",
             ),
         ],
         n_patients=np.array(fixed_dose_regret_trials).shape[1],
@@ -163,7 +163,7 @@ if __name__ == "__main__":
             Metric(
                 metric_values=bandit_sl_incorrect_frac_trials,
                 label_name="Bandit SL",
-                color="yellow",
+                color="gold",
             ),
         ],
         n_patients=np.array(fixed_dose_incorrect_frac_trials).shape[1],

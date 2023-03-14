@@ -118,7 +118,7 @@ def compute_feature_columns(old_df: pd.DataFrame) -> pd.DataFrame:
     df["Age"].fillna("40 - 49", inplace=True)
     # Convert age to decade.
     df["_age_decade"] = 0.0
-    df = df.assign(_age_decade=lambda x: int(x["Age"][0][0]))
+    df = df.assign(_age_decade=lambda x: x["Age"].str[0].astype(int))
     df = df.drop(
         columns=[
             "Age",
@@ -148,7 +148,9 @@ if __name__ == "__main__":
     print(patients_df[RS9923231_COL].count())
 
 
-def compute_features_and_targets(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+def compute_features_and_targets(
+    df: pd.DataFrame,
+) -> Tuple[np.ndarray[float], np.ndarray[np.ndarray[int]]]:
     # df = df.sample(frac=1).reset_index(drop=True)  # Shuffle the dataset ordering
 
     n_samples, n_arms = len(df), 3

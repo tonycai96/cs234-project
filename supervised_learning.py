@@ -35,7 +35,7 @@ def _initialize_linear_model(
     X: np.ndarray, y: np.ndarray
 ) -> linear_model.LinearRegression:
     # Randomly initialize the linear model. The model cannot be used to predict
-    # without fitting on something first.
+    # without being fitted on something first.
     random_x = np.random.rand(*X.shape)
     random_y = np.random.rand(*y.shape)
     model = linear_model.LinearRegression().fit(random_x, random_y)
