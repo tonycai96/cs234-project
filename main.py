@@ -6,9 +6,12 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 import supervised_learning
+import thompson_sampling
 from dosing_algo import (fixed_dose_policy, linucb_policy,
                          pharmacogenetic_policy)
 from preprocessing import preprocess_patients_df
+
+N_TRIALS = 20
 
 
 @dataclasses.dataclass(frozen=True)
@@ -78,11 +81,12 @@ if __name__ == "__main__":
     patients_df = pd.read_csv("data/warfarin.csv")
     patients_df = preprocess_patients_df(patients_df)
 
-    N_TRIALS = 20
     fixed_dose_regret_trials, fixed_dose_incorrect_frac_trials = [], []
     linear_oracle_regret_trials, linear_oracle_incorrect_frac_trials = [], []
     linucb_regret_trials, linucb_incorrect_frac_trials = [], []
     bandit_sl_regret_trials, bandit_sl_incorrect_frac_trials = [], []
+    ts_regret_trials, ts_incorrect_frac_trials = [], []
+
     for _ in range(N_TRIALS):
         shuffled_patients_df = patients_df.sample(frac=1).reset_index(drop=True)
         dosage_target = shuffled_patients_df["Therapeutic Dose of Warfarin"].to_numpy()
@@ -115,6 +119,11 @@ if __name__ == "__main__":
         bandit_sl_regret_trials.append(bandit_sl_regret)
         bandit_sl_incorrect_frac_trials.append(bandit_sl_incorrect_frac)
 
+        ts_buckets = thompson_sampling.thompson_sampling(shuffled_patients_df)
+        ts_regret, ts_incorrect_frac = compute_metrics(ts_buckets, dosage_target)
+        ts_regret_trials.append(ts_regret)
+        ts_incorrect_frac_trials.append(ts_incorrect_frac)
+
     plot_performance(
         metrics=[
             Metric(
@@ -134,6 +143,11 @@ if __name__ == "__main__":
                 metric_values=bandit_sl_regret_trials,
                 label_name="Bandit SL",
                 color="gold",
+            ),
+            Metric(
+                metric_values=ts_regret_trials,
+                label_name="Thompson Sampling",
+                color="violet",
             ),
         ],
         n_patients=np.array(fixed_dose_regret_trials).shape[1],
@@ -164,6 +178,11 @@ if __name__ == "__main__":
                 metric_values=bandit_sl_incorrect_frac_trials,
                 label_name="Bandit SL",
                 color="gold",
+            ),
+            Metric(
+                metric_values=ts_incorrect_frac_trials,
+                label_name="Thompson Sampling",
+                color="violet",
             ),
         ],
         n_patients=np.array(fixed_dose_incorrect_frac_trials).shape[1],
