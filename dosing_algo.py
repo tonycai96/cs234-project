@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from linucb import linear_ucb
+from linucb import linear_ucb, safe_linear_ucb
 from preprocessing import compute_features_and_targets
 
 
@@ -45,9 +45,14 @@ def pharmacogenetic_policy(dataset: pd.DataFrame) -> np.ndarray[int]:
     return dosage_buckets
 
 
-def linucb_policy(dataset: pd.DataFrame) -> np.ndarray:
+def linucb_policy(dataset: pd.DataFrame, beta: float) -> np.ndarray:
     features, arms_rewards = compute_features_and_targets(dataset)
-    return linear_ucb(features, arms_rewards, alpha=1)
+    return linear_ucb(features, arms_rewards, beta)
+
+
+def safe_linucb_policy(dataset: pd.DataFrame, alpha: float, beta: float) -> np.ndarray:
+    features, arms_rewards = compute_features_and_targets(dataset)
+    return safe_linear_ucb(features, arms_rewards, alpha, beta)
 
 
 if __name__ == "__main__":

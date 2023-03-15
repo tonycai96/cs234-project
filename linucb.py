@@ -50,7 +50,7 @@ def linear_ucb_v2(
 
 
 # Bound on quad_form(p-p_hat, V) doesn't increases as a function of time
-def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, alpha: int = 2) -> np.ndarray:
+def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, beta: int = 2) -> np.ndarray:
     N_ARMS = 3
     chosen_arms = []
     num_samples, n_features = x_train.shape
@@ -62,7 +62,7 @@ def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, alpha: int = 2) -> np.n
         for a in range(N_ARMS):
             A_inv = np.linalg.inv(A_arms[a])
             theta_a = A_inv @ b_arms[a]
-            pred_arms[a] = theta_a @ x_t + alpha * np.sqrt(x_t @ (A_inv @ x_t))
+            pred_arms[a] = theta_a @ x_t + beta * np.sqrt(x_t @ (A_inv @ x_t))
         a_t = np.argmax(pred_arms)
         A_arms[a_t] += np.outer(x_t, x_t)
         b_arms[a_t] += y_train[i][a_t] * x_t
@@ -104,9 +104,10 @@ def linear_ucb_stacked(
         chosen_arms.append(a_t)
     return chosen_arms
 
-
-def conservative_linear_ucb(
-    x_train: np.ndarray, y_train: np.ndarray, alpha: float
+# alpha = reward at most (1 - alpha) worse than baseline
+# beta = confidence interval bound
+def safe_linear_ucb(
+    x_train: np.ndarray, y_train: np.ndarray, alpha: float, beta: float
 ) -> np.ndarray:
     N_ARMS = 3
     chosen_arms = []
@@ -138,7 +139,6 @@ def conservative_linear_ucb(
         theta_hat = A_inv @ b
         for a in range(N_ARMS):
             x_at = arms_features[a][t]
-            beta = 10
             theta_a = theta_hat + beta / np.sqrt(x_at @ (A_inv @ x_at)) * A_inv @ x_at
             pred_arms[a] = x_at.T @ theta_a
         a_t = np.argmax(pred_arms)
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     # chosen_arms = linear_ucb(x_train, y_train, alpha=10)
     # chosen_arms = linear_ucb_v2(x_train, y_train, sigma=0.1, reg=1, delta=0.01)
     # chosen_arms = linear_ucb_stacked(x_train, y_train, alpha=10)
-    chosen_arms = conservative_linear_ucb(x_train, y_train, alpha=0.1)
+    chosen_arms = safe_linear_ucb(x_train, y_train, alpha=0.1)
 
     # Update stats
     num_samples = x_train.shape[0]

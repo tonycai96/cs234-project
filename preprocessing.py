@@ -159,7 +159,7 @@ def compute_features_and_targets(
     features_np = np.hstack([features_df.to_numpy(), np.ones((n_samples, 1))])
 
     dosage_np = df["Therapeutic Dose of Warfarin"].to_numpy()
-    targets_np = np.zeros((n_samples, n_arms))
+    targets_np = np.ones((n_samples, n_arms))
     targets_np[dosage_np < 21, 1] = -1.0
     targets_np[dosage_np < 21, 2] = -1.0
     targets_np[np.all([dosage_np >= 21, dosage_np <= 49], axis=0), 0] = -1.0
