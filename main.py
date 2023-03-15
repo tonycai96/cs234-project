@@ -6,9 +6,12 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 import supervised_learning
-from dosing_algo import (fixed_dose_policy, linucb_policy, safe_linucb_policy,
-                         pharmacogenetic_policy)
+import thompson_sampling
+from dosing_algo import (fixed_dose_policy, linucb_policy,
+                         pharmacogenetic_policy, safe_linucb_policy)
 from preprocessing import preprocess_patients_df
+
+N_TRIALS = 20
 
 
 @dataclasses.dataclass(frozen=True)
@@ -79,6 +82,8 @@ def compare_all_methods(patients_df):
     linucb_regret_trials, linucb_incorrect_frac_trials = [], []
     safeucb_regret_trials, safeucb_incorrect_frac_trials = [], []
     bandit_sl_regret_trials, bandit_sl_incorrect_frac_trials = [], []
+    ts_regret_trials, ts_incorrect_frac_trials = [], []
+
     for _ in range(N_TRIALS):
         shuffled_patients_df = patients_df.sample(frac=1).reset_index(drop=True)
         dosage_target = shuffled_patients_df["Therapeutic Dose of Warfarin"].to_numpy()
@@ -118,6 +123,11 @@ def compare_all_methods(patients_df):
         safeucb_regret_trials.append(safeucb_regret)
         safeucb_incorrect_frac_trials.append(safeucb010_incorrect_frac)
     
+        ts_buckets = thompson_sampling.thompson_sampling(shuffled_patients_df)
+        ts_regret, ts_incorrect_frac = compute_metrics(ts_buckets, dosage_target)
+        ts_regret_trials.append(ts_regret)
+        ts_incorrect_frac_trials.append(ts_incorrect_frac)
+
     plot_performance(
         metrics=[
             Metric(
@@ -258,5 +268,5 @@ if __name__ == "__main__":
     patients_df = pd.read_csv("data/warfarin.csv")
     patients_df = preprocess_patients_df(patients_df)
 
-    # compare_all_methods(patients_df)
+    compare_all_methods(patients_df)
     safe_lin_ucb_experiment(patients_df)

@@ -1,4 +1,3 @@
-import dataclasses
 from typing import Literal, Tuple
 
 import numpy as np
@@ -17,8 +16,8 @@ class BetaParams:
 
 
 class ContextFreeMAB:
-    def __init__(self, priors: list[BetaParams]) -> None:
-        self.priors = priors
+    def __init__(self, num_arms: int = 3) -> None:
+        self.priors = [BetaParams() for _ in range(num_arms)]
         self.rng = np.random.default_rng(seed=42)
 
     def play_arm(self, target: np.ndarray[Literal[0, -1]]) -> int:
@@ -28,21 +27,64 @@ class ContextFreeMAB:
         return chosen_arm
 
 
+def thompson_sampling(dataset: pd.DataFrame) -> np.ndarray[int]:
+    dosage_buckets = []
+    features, targets = _compute_features_and_targets(dataset)
+    MABs = _initialize(features)
+    for feature, target in zip(features, targets):
+        key = _convert_feature_to_bit_string(feature)
+        dosage_buckets.append(MABs[key].play_arm(target))
+
+    return np.array(dosage_buckets)
+
+
 def _compute_features_and_targets(
     df: pd.DataFrame,
-) -> Tuple[np.ndarray[float], np.ndarray[np.ndarray[int]]]:
+) -> Tuple[np.ndarray[np.ndarray[float]], np.ndarray[np.ndarray[int]]]:
     n_samples, n_arms = len(df), 3
 
     # Discretize all continuous features.
-    # Divide height and weights into 3 buckets each.
-    df.assign(_is_height_between_120_and_150=lambda x: 120 <= x["Height (cm)"] < 150)
-    df.assign(_is_height_between_180_and_210=lambda x: 150 <= x["Height (cm)"] < 180)
-    df.assign(_is_height_between_180_and_210=lambda x: 180 <= x["Height (cm)"] < 210)
-    df.assign(_is_weight_between_30_and_100=lambda x: 30 <= x["Weight (kg)"] < 100)
-    df.assign(_is_weight_between_100_and_170=lambda x: 100 <= x["Weight (kg)"] < 170)
-    df.assign(_is_weight_between_170_and_240=lambda x: 170 <= x["Weight (kg)"] < 240)
-
-    features_df = df.drop("Therapeutic Dose of Warfarin", axis=1)
+    # Divide height and weights into 3 buckets.
+    df["_is_height_between_120_and_150"] = df["Height (cm)"].between(
+        120, 150, inclusive="left"
+    )
+    df["_is_height_between_150_and_180"] = df["Height (cm)"].between(
+        150, 180, inclusive="left"
+    )
+    df["_is_height_between_180_and_210"] = df["Height (cm)"].between(
+        180, 210, inclusive="left"
+    )
+    df["_is_weight_between_30_and_100"] = df["Weight (kg)"].between(
+        30, 100, inclusive="left"
+    )
+    df["_is_weight_between_100_and_170"] = df["Weight (kg)"].between(
+        100, 170, inclusive="left"
+    )
+    df["_is_weight_between_170_and_240"] = df["Weight (kg)"].between(
+        170, 240, inclusive="left"
+    )
+    # Each decade is in its own bucket and column.
+    for decade in range(1, 10, 2):
+        df[f"_is_decade_{decade}"] = df["_age_decade"].between(
+            decade, decade + 2, inclusive="left"
+        )
+    features_df = df.copy()
+    for column in [
+        "Therapeutic Dose of Warfarin",
+        "Height (cm)",
+        "Weight (kg)",
+        "_age_decade",
+        # "VKORC1 A/G",
+        # "VKORC1 A/A",
+        # "VKORC1 unknown",
+        # "CYP2C9 *1/*2",
+        # "CYP2C9 *1/*3",
+        # "CYP2C9 *2/*2",
+        # "CYP2C9 *2/*3",
+        # "CYP2C9 *3/*3",
+        # "CYP2C9 unknown",
+    ]:
+        features_df = features_df.drop(column, axis=1)
     features_np = np.hstack([features_df.to_numpy(), np.ones((n_samples, 1))])
 
     dosage_np = df["Therapeutic Dose of Warfarin"].to_numpy()
@@ -54,3 +96,12 @@ def _compute_features_and_targets(
     targets_np[dosage_np > 49, 0] = -1.0
     targets_np[dosage_np > 49, 1] = -1.0
     return features_np, targets_np
+
+
+def _initialize(features: np.ndarray[np.ndarray[float]]) -> dict[str, ContextFreeMAB]:
+    # Assign one context-free MAB for each combination of features.
+    return {_convert_feature_to_bit_string(f): ContextFreeMAB() for f in features}
+
+
+def _convert_feature_to_bit_string(feature: np.ndarray[float]) -> str:
+    return "".join(bit for bit in feature.astype(int).astype(str))
