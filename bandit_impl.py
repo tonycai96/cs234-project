@@ -2,6 +2,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
+N_ARMS = 3
+
+
 # Bound on quad_form(p-p_hat, V) increases as a function of time
 def linear_ucb_v2(
     x_train: np.ndarray,
@@ -10,7 +13,6 @@ def linear_ucb_v2(
     reg: float,
     delta: float = 0.05,
 ) -> np.ndarray:
-    N_ARMS = 3
     chosen_arms = []
     D = np.max(np.linalg.norm(x_train, axis=1))
     B = np.max(y_train)
@@ -51,7 +53,6 @@ def linear_ucb_v2(
 
 # Bound on quad_form(p-p_hat, V) doesn't increases as a function of time
 def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, beta: int = 2) -> np.ndarray:
-    N_ARMS = 3
     chosen_arms = []
     num_samples, n_features = x_train.shape
     A_arms = [np.eye(n_features), np.eye(n_features), np.eye(n_features)]
@@ -73,7 +74,6 @@ def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, beta: int = 2) -> np.nd
 def linear_ucb_stacked(
     x_train: np.ndarray, y_train: np.ndarray, alpha: int = 2
 ) -> np.ndarray:
-    N_ARMS = 3
     chosen_arms = []
     n_samples, n_features = x_train.shape
     arm1_features = np.hstack(
@@ -104,13 +104,8 @@ def linear_ucb_stacked(
         chosen_arms.append(a_t)
     return chosen_arms
 
-# alpha = reward at most (1 - alpha) worse than baseline
-# beta = confidence interval bound
-def safe_linear_ucb(
-    x_train: np.ndarray, y_train: np.ndarray, alpha: float, beta: float
-) -> np.ndarray:
-    N_ARMS = 3
-    chosen_arms = []
+
+def stack_arm_features(x_train):
     n_samples, n_features = x_train.shape
     arm1_features = np.hstack(
         [x_train, np.zeros((n_samples, n_features)), np.zeros((n_samples, n_features))]
@@ -122,7 +117,16 @@ def safe_linear_ucb(
         [np.zeros((n_samples, n_features)), np.zeros((n_samples, n_features)), x_train]
     )
     arms_features = [arm1_features, arm2_features, arm3_features]
-    n_features *= 3
+    return arms_features
+
+
+# alpha = reward at most (1 - alpha) worse than baseline
+# beta = confidence interval bound
+def safe_linear_ucb(
+    x_train: np.ndarray, y_train: np.ndarray, alpha: float, beta: float
+) -> np.ndarray:
+    arms_features = stack_arm_features(x_train)
+    n_samples, n_features = arms_features[0].shape
     A = np.eye(n_features)
     b = np.zeros(n_features)
     z = np.zeros(n_features)  # cumulative features of non-optimal actions
@@ -133,6 +137,7 @@ def safe_linear_ucb(
     baseline_action_count = 0
     explore_action_count = 0
 
+    chosen_arms = []
     for t in range(n_samples):
         pred_arms = np.zeros(N_ARMS)
         A_inv = np.linalg.inv(A)
@@ -168,6 +173,24 @@ def safe_linear_ucb(
     return chosen_arms
 
 
+def thompson_sampling(x_train: np.ndarray, y_train: np.ndarray, v: float):
+    arms_features = stack_arm_features(x_train)
+    n_samples, n_features = arms_features[0].shape
+    A = np.eye(n_features)
+    mu = np.zeros(n_features)
+    f = np.zeros(n_features)
+    chosen_arms = []
+    for t in range(n_samples):
+        theta = np.random.multivariate_normal(mu, v**2*np.linalg.inv(A))
+        r_arms = x_train[t] @ theta
+        a = np.argmax(r_arms)
+        chosen_arms.append(a)
+        A += np.outer(arms_features[a][t], arms_features[a][t])
+        f += y_train[t] * arms_features[a][t]
+        mu = np.linalg.inv(A) @ f
+    return chosen_arms
+
+
 if __name__ == "__main__":
     np.random.seed(42)
     true_arms = 5 * np.random.rand(5, 3)
@@ -182,7 +205,7 @@ if __name__ == "__main__":
     # chosen_arms = linear_ucb(x_train, y_train, alpha=10)
     # chosen_arms = linear_ucb_v2(x_train, y_train, sigma=0.1, reg=1, delta=0.01)
     # chosen_arms = linear_ucb_stacked(x_train, y_train, alpha=10)
-    chosen_arms = safe_linear_ucb(x_train, y_train, alpha=0.1)
+    chosen_arms = safe_linear_ucb(x_train, y_train, alpha=0.1, beta=10)
 
     # Update stats
     num_samples = x_train.shape[0]
