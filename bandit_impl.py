@@ -1,11 +1,10 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-
 N_ARMS = 3
 
 
-def stack_arm_features(x_train):
+def stack_arm_features(x_train) -> list[np.ndarray]:
     n_samples, n_features = x_train.shape
     arm1_features = np.hstack(
         [x_train, np.zeros((n_samples, n_features)), np.zeros((n_samples, n_features))]
@@ -16,14 +15,11 @@ def stack_arm_features(x_train):
     arm3_features = np.hstack(
         [np.zeros((n_samples, n_features)), np.zeros((n_samples, n_features)), x_train]
     )
-    arms_features = [arm1_features, arm2_features, arm3_features]
-    return arms_features
+    return [arm1_features, arm2_features, arm3_features]
 
 
 # beta = 1 + sqrt(ln(2/delta)/2)
-def linear_ucb(
-    x_train: np.ndarray, y_train: np.ndarray, beta: float
-) -> np.ndarray:
+def linear_ucb(x_train: np.ndarray, y_train: np.ndarray, beta: float) -> np.ndarray:
     arms_features = stack_arm_features(x_train)
     n_samples, n_features = arms_features[0].shape
     A = np.eye(n_features)
@@ -74,7 +70,7 @@ def oful(
 # beta = confidence interval bound
 def safe_linear_ucb(
     x_train: np.ndarray, y_train: np.ndarray, alpha: float, beta: float
-) -> np.ndarray:
+) -> np.ndarray[int]:
     arms_features = stack_arm_features(x_train)
     n_samples, n_features = arms_features[0].shape
     A = np.eye(n_features)
@@ -120,10 +116,13 @@ def safe_linear_ucb(
 
     print("baseline count = ", baseline_action_count)
     print("explore count = ", explore_action_count)
-    return chosen_arms
+    return np.array(chosen_arms)
 
 
-def thompson_sampling(x_train: np.ndarray, y_train: np.ndarray, v: float):
+def gaussian_thompson_sampling(
+    x_train: np.ndarray, y_train: np.ndarray, v: float
+) -> np.ndarray[int]:
+    x_train = x_train.astype(np.float64)
     arms_features = stack_arm_features(x_train)
     n_samples, n_features = arms_features[0].shape
     A = np.eye(n_features)
@@ -131,7 +130,7 @@ def thompson_sampling(x_train: np.ndarray, y_train: np.ndarray, v: float):
     f = np.zeros(n_features)
     chosen_arms = []
     for t in range(n_samples):
-        theta = np.random.multivariate_normal(mu, v**2*np.linalg.inv(A))
+        theta = np.random.multivariate_normal(mu, v**2 * np.linalg.inv(A))
         pred_arms = np.zeros(N_ARMS)
         for a in range(N_ARMS):
             pred_arms[a] = np.dot(arms_features[a][t], theta)
@@ -140,7 +139,7 @@ def thompson_sampling(x_train: np.ndarray, y_train: np.ndarray, v: float):
         A += np.outer(arms_features[a][t], arms_features[a][t])
         f += y_train[t][a] * arms_features[a][t]
         mu = np.linalg.inv(A) @ f
-    return chosen_arms
+    return np.array(chosen_arms)
 
 
 if __name__ == "__main__":
@@ -159,7 +158,7 @@ if __name__ == "__main__":
     # chosen_arms = oful(x_train, y_train, delta=0.05, var=0.1, S=1)
     # chosen_arms = linear_ucb_v2(x_train, y_train, sigma=0.1, reg=1, delta=0.01)
     # chosen_arms = safe_linear_ucb(x_train, y_train, alpha=0.1, beta=10)
-    chosen_arms = thompson_sampling(x_train, y_train, v=1)
+    chosen_arms = gaussian_thompson_sampling(x_train, y_train, v=1)
 
     # Update stats
     num_samples = x_train.shape[0]
