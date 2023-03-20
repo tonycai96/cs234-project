@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from linucb import linear_ucb, safe_linear_ucb
+from bandit_impl import linear_ucb, safe_linear_ucb, oful, thompson_sampling
 from preprocessing import compute_features_and_targets
 
 
@@ -48,6 +48,16 @@ def pharmacogenetic_policy(dataset: pd.DataFrame) -> np.ndarray[int]:
 def linucb_policy(dataset: pd.DataFrame, beta: float) -> np.ndarray:
     features, arms_rewards = compute_features_and_targets(dataset)
     return linear_ucb(features, arms_rewards, beta)
+
+
+def oful_policy(dataset: pd.DataFrame, delta: float, var: float = 0.1, S: float = 1.0) -> np.ndarray:
+    features, arms_rewards = compute_features_and_targets(dataset)
+    return oful(features, arms_rewards, delta, var, S)
+
+
+def ts_policy(dataset: pd.DataFrame, var: float) -> np.ndarray:
+    features, arms_rewards = compute_features_and_targets(dataset)
+    return thompson_sampling(features, arms_rewards, var)
 
 
 def safe_linucb_policy(dataset: pd.DataFrame, alpha: float, beta: float) -> np.ndarray:
