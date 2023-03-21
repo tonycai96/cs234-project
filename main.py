@@ -308,6 +308,16 @@ def compare_all_methods(patients_df: pd.DataFrame) -> None:
         metric_name="Fraction of incorrect dosing decisions",
         file_name="incorrect_fraction.png",
     )
+    final_cumulative_regrets = {
+        method_name: np.average([r[-1] for r in regrets])
+        for method_name, regrets in regret_by_method_names.items()
+    }
+    final_incorrect_fracs = {
+        method_name: np.average([f[-1] for f in fracs])
+        for method_name, fracs in incorrect_frac_by_method_names.items()
+    }
+    print(f"Average Cumulative Regrets over Trials: {final_cumulative_regrets}")
+    print(f"Average Incorrect Fractions over Trials: {final_incorrect_fracs}")
 
 
 def safe_lin_ucb_experiment(patients_df):
