@@ -1,3 +1,4 @@
+import collections
 from typing import Literal, Tuple
 
 import numpy as np
@@ -12,19 +13,26 @@ class BetaParams:
     def update(self, reward: Literal[0, -1]) -> None:
         # 0 and -1 correspond to 1 and 0 in the original reward scheme, respectively.
         self.alpha += reward + 1
-        self.beta += -reward
+        self.beta -= reward
+
+    def __repr__(self) -> str:
+        return f"(alpha: {self.alpha}, beta: {self.beta})"
 
 
 class ContextFreeMAB:
     def __init__(self, num_arms: int = 3) -> None:
         self.priors = [BetaParams() for _ in range(num_arms)]
-        self.rng = np.random.default_rng(seed=42)
+        self.rng = np.random.default_rng()
 
     def play_arm(self, target: np.ndarray[Literal[0, -1]]) -> int:
-        chosen_arm = np.argmax(self.rng.beta(a=p.alpha, b=p.beta) for p in self.priors)
+        rewards = [self.rng.beta(a=p.alpha, b=p.beta) for p in self.priors]
+        chosen_arm = np.argmax(rewards)
         actual_reward = target[chosen_arm]
         self.priors[chosen_arm].update(actual_reward)
         return chosen_arm
+
+    def __repr__(self) -> str:
+        return str(self.priors)
 
 
 def thompson_sampling(dataset: pd.DataFrame) -> np.ndarray[int]:
@@ -35,6 +43,7 @@ def thompson_sampling(dataset: pd.DataFrame) -> np.ndarray[int]:
         key = _convert_feature_to_bit_string(feature)
         dosage_buckets.append(MABs[key].play_arm(target))
 
+    # print(f"Final MABs: {MABs}")
     return np.array(dosage_buckets)
 
 
@@ -74,15 +83,15 @@ def _compute_features_and_targets(
         "Height (cm)",
         "Weight (kg)",
         "_age_decade",
-        # "VKORC1 A/G",
-        # "VKORC1 A/A",
-        # "VKORC1 unknown",
-        # "CYP2C9 *1/*2",
-        # "CYP2C9 *1/*3",
-        # "CYP2C9 *2/*2",
-        # "CYP2C9 *2/*3",
-        # "CYP2C9 *3/*3",
-        # "CYP2C9 unknown",
+        "VKORC1 A/G",
+        "VKORC1 A/A",
+        "VKORC1 unknown",
+        "CYP2C9 *1/*2",
+        "CYP2C9 *1/*3",
+        "CYP2C9 *2/*2",
+        "CYP2C9 *2/*3",
+        "CYP2C9 *3/*3",
+        "CYP2C9 unknown",
     ]:
         features_df = features_df.drop(column, axis=1)
     features_np = np.hstack([features_df.to_numpy(), np.ones((n_samples, 1))])
@@ -100,6 +109,10 @@ def _compute_features_and_targets(
 
 def _initialize(features: np.ndarray[np.ndarray[float]]) -> dict[str, ContextFreeMAB]:
     # Assign one context-free MAB for each combination of features.
+    # unique_features_counter = collections.Counter()
+    # for f in features:
+    #     unique_features_counter[_convert_feature_to_bit_string(f)] += 1
+    # print(f"Unique features count: {unique_features_counter}")
     return {_convert_feature_to_bit_string(f): ContextFreeMAB() for f in features}
 
 
