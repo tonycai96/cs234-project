@@ -99,126 +99,6 @@ def compare_ucb_methods(patients_df):
     print("TS (v = 1) = ", np.mean(np.array(ts_incorrect_frac_trials)[:, -1]))
 
 
-def contextual_mab_experiments(patients_df):
-    N_TRIALS = 2
-    # smaller bound than paper
-    linucb_sm1_regret_trials, linucb_sm1_incorrect_frac_trials = [], []
-    # smaller bound than paper
-    linucb_sm2_regret_trials, linucb_sm2_incorrect_frac_trials = [], []
-    # delta = 0.01
-    linucb_1_regret_trials, linucb_1_incorrect_frac_trials = [], []
-    # delta = 0.10
-    linucb_10_regret_trials, linucb_10_incorrect_frac_trials = [], []
-    # smaller bound than paper
-    oful_sm_regret_trials, oful_sm_incorrect_frac_trials = [], []
-    # delta = 0.01
-    oful_1_regret_trials, oful_1_incorrect_frac_trials = [], []
-    # delta = 0.10
-    oful_10_regret_trials, oful_10_incorrect_frac_trials = [], []
-
-    for i in range(N_TRIALS):
-        print("Starting trial ", i)
-        shuffled_patients_df = patients_df.sample(frac=1).reset_index(drop=True)
-        dosage_target = shuffled_patients_df["Therapeutic Dose of Warfarin"].to_numpy()
-
-        # linucb_sm1_dose_bucket = linucb_policy(shuffled_patients_df, beta=0.10)
-        # linucb_sm1_regret, linucb_sm1_incorrect_frac = compute_metrics(
-        #     linucb_sm1_dose_bucket, dosage_target
-        # )
-        # linucb_sm1_regret_trials.append(linucb_sm1_regret)
-        # linucb_sm1_incorrect_frac_trials.append(linucb_sm1_incorrect_frac)
-
-        # linucb_sm2_dose_bucket = linucb_policy(shuffled_patients_df, beta=0.50)
-        # linucb_sm2_regret, linucb_sm2_incorrect_frac = compute_metrics(
-        #     linucb_sm2_dose_bucket, dosage_target
-        # )
-        # linucb_sm2_regret_trials.append(linucb_sm2_regret)
-        # linucb_sm2_incorrect_frac_trials.append(linucb_sm2_incorrect_frac)
-
-        # linucb_1_dose_bucket = linucb_policy(shuffled_patients_df, beta=2.22)
-        # linucb_1_regret, linucb_1_incorrect_frac = compute_metrics(
-        #     linucb_1_dose_bucket, dosage_target
-        # )
-        # linucb_1_regret_trials.append(linucb_1_regret)
-        # linucb_1_incorrect_frac_trials.append(linucb_1_incorrect_frac)
-
-        # linucb_10_dose_bucket = linucb_policy(shuffled_patients_df, beta=2.63)
-        # linucb_10_regret, linucb_10_incorrect_frac = compute_metrics(
-        #     linucb_10_dose_bucket, dosage_target
-        # )
-        # linucb_10_regret_trials.append(linucb_10_regret)
-        # linucb_10_incorrect_frac_trials.append(linucb_10_incorrect_frac)
-
-        oful_sm_dose_bucket = oful_policy(
-            shuffled_patients_df, var=0.02, delta=0.10, S=0.4
-        )
-        oful_sm_regret, oful_sm_incorrect_frac = compute_metrics(
-            oful_sm_dose_bucket, dosage_target
-        )
-        oful_sm_regret_trials.append(oful_sm_regret)
-        oful_sm_incorrect_frac_trials.append(oful_sm_incorrect_frac)
-
-        # oful_1_dose_bucket = oful_policy(shuffled_patients_df, delta=0.01)
-        # oful_1_regret, oful_1_incorrect_frac = compute_metrics(
-        #     oful_1_dose_bucket, dosage_target
-        # )
-        # oful_1_regret_trials.append(oful_1_regret)
-        # oful_1_incorrect_frac_trials.append(oful_1_incorrect_frac)
-
-        # oful_10_dose_bucket = oful_policy(shuffled_patients_df, delta=0.10)
-        # oful_10_regret, oful_10_incorrect_frac = compute_metrics(
-        #     oful_10_dose_bucket, dosage_target
-        # )
-        # oful_10_regret_trials.append(oful_10_regret)
-        # oful_10_incorrect_frac_trials.append(oful_10_incorrect_frac)
-
-    # print('LinUCB (beta = 0.1): ', np.mean(np.array(linucb_sm1_incorrect_frac_trials)[:, -1]))
-    # print('LinUCB (beta = 0.5): ', np.mean(np.array(linucb_sm2_incorrect_frac_trials)[:, -1]))
-    # print('LinUCB (delta = 0.01): ', np.mean(np.array(linucb_1_incorrect_frac_trials)[:, -1]))
-    # print('LinUCB (delta = 0.1): ', np.mean(np.array(linucb_10_incorrect_frac_trials)[:, -1]))
-    print("OFUL (small): ", np.mean(np.array(oful_sm_incorrect_frac_trials)[:, -1]))
-    # print('OFUL (delta = 0.01): ', np.mean(np.array(oful_1_incorrect_frac_trials)[:, -1]))
-    # print('OFUL (delta = 0.1): ', np.mean(np.array(oful_10_incorrect_frac_trials)[:, -1]))
-
-    # print('OFUL (delta = 0.01): ', np.mean(oful_1_incorrect_frac_trials[:, -1]))
-    # print('OFUL (delta = 0.1): ', np.mean(oful_10_incorrect_frac_trials[:, -1]))
-
-    # ax = plt.gca()
-    # ax.set_ylim([0.2, 0.8])
-    # plot_performance(
-    #     metrics=[
-    #         Metric(
-    #             metric_values=linucb_sm_incorrect_frac_trials,
-    #             label_name=r"LinUCB ($\beta=0.5)",
-    #             color="pink",
-    #         ),
-    #         Metric(
-    #             metric_values=linucb_1_incorrect_frac_trials,
-    #             label_name=r"LinUCB ($\delta=0.01)",
-    #             color="red",
-    #         ),
-    #         Metric(
-    #             metric_values=linucb_10_incorrect_frac_trials,
-    #             label_name=r"LinUCB ($\delta=0.1)",
-    #             color="maroon",
-    #         ),
-    #         Metric(
-    #             metric_values=oful_1_incorrect_frac_trials,
-    #             label_name=r"LinUCB ($\delta=0.01)",
-    #             color="green",
-    #         ),
-    #         Metric(
-    #             metric_values=oful_1_incorrect_frac_trials,
-    #             label_name=r"LinUCB ($\delta=0.01)",
-    #             color="purple",
-    #         ),
-    #     ],
-    #     n_steps=np.array(fixed_dose_incorrect_frac_trials).shape[1],
-    #     metric_name="Fraction of incorrect dosing decision",
-    #     file_name="incorrect_fraction.png",
-    # )
-
-
 @dataclasses.dataclass(frozen=True)
 class AlgoConfig:
     algo: Callable
@@ -238,7 +118,7 @@ _METHOD_NAME_TO_ALGOS = {
     ),
     "cl-ucb": AlgoConfig(
         algo=lambda df: safe_linucb_policy(df, alpha=0.1, beta=0.5),
-        metric_name="CLinUCB",
+        metric_name="CLUCB",
         color="brown",
     ),
     "bandit-sl": AlgoConfig(
@@ -254,19 +134,71 @@ _METHOD_NAME_TO_ALGOS = {
     ),
 }
 
+_TS_ALGOS = {
+    "lin-ucb": AlgoConfig(
+        algo=lambda df: linucb_policy(df, beta=0.5), metric_name="LinUCB", color="green"
+    ),
+    "gaussian-ts-0.5": AlgoConfig(
+        algo=lambda df: gaussian_ts_policy(df, var=0.5),
+        metric_name="Gaussian TS (v=0.5)",
+        color="green",
+    ),
+    "gaussian-ts-0.3": AlgoConfig(
+        algo=lambda df: gaussian_ts_policy(df, var=0.3),
+        metric_name="Gaussian TS (v=0.3)",
+        color="purple",
+    ),
+    "gaussian-ts-0.1": AlgoConfig(
+        algo=lambda df: gaussian_ts_policy(df, var=0.3),
+        metric_name="Gaussian TS (v=0.1)",
+        color="red",
+    ),
+}
 
-def compare_all_methods(patients_df: pd.DataFrame) -> None:
-    N_TRIALS = 20
+_ROBUSTNESS_ALGOS = {
+    "lin-ucb": AlgoConfig(
+        algo=lambda df: linucb_policy(df, beta=0.5), metric_name="LinUCB", color="teal"
+    ),
+    "gaussian-ts-0.3": AlgoConfig(
+        algo=lambda df: gaussian_ts_policy(df, var=0.3),
+        metric_name="Gaussian TS (v=0.3)",
+        color="brown",
+    ),
+    "fixed-dose": AlgoConfig(
+        algo=fixed_dose_policy, metric_name="Fixed Dose", color="gray"
+    ),
+    "cl-ucb": AlgoConfig(
+        algo=lambda df: safe_linucb_policy(df, alpha=0.1, beta=0.5),
+        metric_name="CLUCB",
+        color="blue",
+    ),
+}
 
+
+_ALGOS_PARAMS = {
+    "lin-ucb1": AlgoConfig(
+        algo=lambda df: linucb_policy(df, beta=0.5), metric_name="LinUCB", color="green"
+    ),
+    "lin-ucb2": AlgoConfig(
+        algo=lambda df: linucb_policy(df, beta=2.22), metric_name="LinUCB", color="green"
+    ),
+    "lin-ucb3": AlgoConfig(
+        algo=lambda df: linucb_policy(df, beta=2.63), metric_name="LinUCB", color="green"
+    ),
+}
+
+
+def run_experiments(patients_df: pd.DataFrame, algos_dict: list, exp_name: str) -> None:
     regret_by_method_names = collections.defaultdict(list)
     incorrect_frac_by_method_names = collections.defaultdict(list)
 
+    N_TRIALS = 20
     for i in range(N_TRIALS):
         print(f"Running trial {i}")
         shuffled_patients_df = patients_df.sample(frac=1).reset_index(drop=True)
         dosage_target = shuffled_patients_df["Therapeutic Dose of Warfarin"].to_numpy()
 
-        for method_name, config in _METHOD_NAME_TO_ALGOS.items():
+        for method_name, config in algos_dict.items():
             buckets = config.algo(shuffled_patients_df)
             regret, incorrect_frac = compute_metrics(buckets, dosage_target)
             regret_by_method_names[method_name].append(regret)
@@ -276,9 +208,10 @@ def compare_all_methods(patients_df: pd.DataFrame) -> None:
             incorrect_frac_df = pd.DataFrame(
                 data=incorrect_frac_by_method_names[method_name]
             )
-            regret_df.to_csv(f"output/regret-{method_name}.csv")
-            incorrect_frac_df.to_csv(f"output/incorrect-frac-{method_name}.csv")
+            regret_df.to_csv(f"output/{exp_name}-regret-{method_name}.csv")
+            incorrect_frac_df.to_csv(f"output/{exp_name}-incorrect-frac-{method_name}.csv")
 
+    n_steps = len(patients_df)
     plot_performance(
         metrics=[
             Metric(
@@ -286,11 +219,11 @@ def compare_all_methods(patients_df: pd.DataFrame) -> None:
                 label_name=config.metric_name,
                 color=config.color,
             )
-            for method_name, config in _METHOD_NAME_TO_ALGOS.items()
+            for method_name, config in algos_dict.items()
         ],
-        n_steps=np.array(regret_by_method_names["fixed-dose"]).shape[1],
+        n_steps=n_steps,
         metric_name="Regret",
-        file_name="regret.png",
+        file_name="{0}_regret.png".format(exp_name),
     )
 
     ax = plt.gca()
@@ -302,11 +235,11 @@ def compare_all_methods(patients_df: pd.DataFrame) -> None:
                 label_name=config.metric_name,
                 color=config.color,
             )
-            for method_name, config in _METHOD_NAME_TO_ALGOS.items()
+            for method_name, config in algos_dict.items()
         ],
-        n_steps=np.array(incorrect_frac_by_method_names["fixed-dose"]).shape[1],
+        n_steps=n_steps,
         metric_name="Fraction of incorrect dosing decisions",
-        file_name="incorrect_fraction.png",
+        file_name="{0}_incorrect_fraction.png".format(exp_name),
     )
     final_cumulative_regrets = {
         method_name: np.average([r[-1] for r in regrets])
@@ -320,84 +253,14 @@ def compare_all_methods(patients_df: pd.DataFrame) -> None:
     print(f"Average Incorrect Fractions over Trials: {final_incorrect_fracs}")
 
 
-def safe_lin_ucb_experiment(patients_df):
-    N_TRIALS = 20
-
-    linucb_beta20_trials = []
-    linucb_beta05_trials = []
-    safeucb_beta20_alpha10_trials = []
-    safeucb_beta05_alpha10_trials = []
-    fixed_dose_trials = []
-    for _ in range(N_TRIALS):
-        shuffled_patients_df = patients_df.sample(frac=1).reset_index(drop=True)[0:1000]
-        dosage_target = shuffled_patients_df["Therapeutic Dose of Warfarin"].to_numpy()
-
-        linucb_beta20_bucket = linucb_policy(shuffled_patients_df, beta=4.0)
-        _, linucb_beta20_incorrect = compute_metrics(
-            linucb_beta20_bucket, dosage_target
-        )
-        linucb_beta20_trials.append(linucb_beta20_incorrect)
-
-        linucb_beta05_bucket = linucb_policy(shuffled_patients_df, beta=0.5)
-        _, linucb_beta05_incorrect = compute_metrics(
-            linucb_beta05_bucket, dosage_target
-        )
-        linucb_beta05_trials.append(linucb_beta05_incorrect)
-
-        safeucb_beta20_alpha10_bucket = safe_linucb_policy(
-            shuffled_patients_df, alpha=0.10, beta=4.0
-        )
-        _, safeucb_beta20_incorrect = compute_metrics(
-            safeucb_beta20_alpha10_bucket, dosage_target
-        )
-        safeucb_beta20_alpha10_trials.append(safeucb_beta20_incorrect)
-
-        safeucb_beta05_alpha10_bucket = safe_linucb_policy(
-            shuffled_patients_df, alpha=0.10, beta=0.5
-        )
-        _, safeucb_beta05_incorrect = compute_metrics(
-            safeucb_beta05_alpha10_bucket, dosage_target
-        )
-        safeucb_beta05_alpha10_trials.append(safeucb_beta05_incorrect)
-
-        fixed_dose_bucket = fixed_dose_policy(shuffled_patients_df)
-        _, fixed_dose_incorrect = compute_metrics(fixed_dose_bucket, dosage_target)
-        fixed_dose_trials.append(fixed_dose_incorrect)
-
-    ax = plt.gca()
-    ax.set_ylim([0.2, 0.8])
-
-    plot_performance(
-        metrics=[
-            Metric(
-                metric_values=fixed_dose_trials,
-                label_name="Fixed Dose",
-                color="blue",
-            ),
-            Metric(
-                metric_values=linucb_beta05_trials,
-                label_name=r"LinUCB",
-                color="red",
-            ),
-            Metric(
-                metric_values=safeucb_beta05_alpha10_trials,
-                label_name=r"CLUCB",
-                color="teal",
-            ),
-        ],
-        n_steps=np.array(fixed_dose_trials).shape[1],
-        metric_name="Fraction of incorrect dosing decision",
-        file_name="incorrect_frac_initial.png",
-    )
-
-
 if __name__ == "__main__":
     np.random.seed(42)
 
     patients_df = pd.read_csv("data/warfarin.csv")
     patients_df = preprocess_patients_df(patients_df)
 
-    # compare_ucb_methods(patients_df)
-    # contextual_mab_experiments(patients_df)
-    compare_all_methods(patients_df)
+    run_experiments(patients_df, _METHOD_NAME_TO_ALGOS, exp_name="all")
+    # run_experiments(patients_df, _TS_ALGOS)
+    # run_experiments(patients_df[0:1000], _ROBUSTNESS_ALGOS, exp_name="safety_trials")
+    # run_experiments(patients_df, _ALGOS_PARAMS, exp_name="hyperparam_tuning")
     # safe_lin_ucb_experiment(patients_df)

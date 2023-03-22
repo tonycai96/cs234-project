@@ -114,8 +114,6 @@ def safe_linear_ucb(
             chosen_arms.append(1)  # baseline action
             baseline_action_count += 1
 
-    print("baseline count = ", baseline_action_count)
-    print("explore count = ", explore_action_count)
     return np.array(chosen_arms)
 
 
